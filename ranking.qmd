@@ -1,0 +1,287 @@
+---
+title: Comparando listas dos *top k* elementos
+subtitle: Ronald Fagin, Ravi Kumar, D. Sivakumar
+author: Fernando Náufel
+institute: RCN, UFF
+date: 24 02 2024
+date-modified: 24 02 2024
+date-format: DD/MM/YYYY
+
+filters:
+  - code-fullscreen
+
+execute: 
+  echo: false
+  eval: true
+  warning: true
+  error: true
+  include: true
+
+format:
+  revealjs: 
+    theme: 
+      - simple
+      - custom.scss
+    css: custom.css
+    width: 1600
+    height: 800
+    lang: pt
+    hash: true
+    hash-type: number
+    hash-one-based-index: true
+    fragment-in-url: true
+    incremental: true
+    auto-stretch: false
+    menu:
+      numbers: true
+    slide-number: true
+    center: false
+    center-title-slide: true
+    preview-links: auto
+    progress: true
+    history: false
+    touch: true
+    keyboard: true
+    mouse-wheel: false
+    hide-inactive-cursor: true
+    hide-cursor-time: 100
+    controls: auto
+    pause: true
+    help: true
+    cap-location: bottom
+    code-copy: true
+    code-link: true
+    fig-align: center
+#    link-external-icon: true
+    link-external-newwindow: true
+    link-external-filter: ^(?:http:|https:)\/\/fnaufel\.github\.io
+    # Se ativar embed-resources, desativar chalkboard:  
+    # embed-resources: true
+    chalkboard: 
+      theme: chalkboard
+      buttons: false
+    include-in-header: 
+      text: |
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+#    header-includes: |
+#      <script type="text/x-mathjax-config">
+#        MathJax.Hub.Config({
+#            jax: ["input/TeX","output/HTML-CSS"],
+#            displayAlign: "left"
+#        });
+#      </script>
+    include-after-body: 
+      text: |
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+    pointer:
+      alwaysVisible: false
+      pointerSize: 20
+
+revealjs-plugins:
+  - pointer
+  - attribution
+  - codefocus
+  
+bibliography: bibliography.bib
+
+# Português:
+csl: universidade-do-porto-faculdade-de-engenharia-chicago-pt-crono.csl
+
+---
+
+```{r echo=FALSE, message=FALSE}
+source('_setup.R')
+library(gt)
+```
+
+
+## Artigo
+
+::::{.columns}
+
+:::{.column width=35%}
+
+![](./images/top-k-article.png){fig-alt="Folha de rosto do artigo" fig-align="center"}
+
+:::
+
+:::{.column width=65%}
+
+[Fagin, Ronald and Kumar, Ravi and Sivakumar, D. (2003). "Comparing Top k Lists". SIAM Journal on Discrete Mathematics, 17, 134–160.]{.text-danger}
+
+* Medidas de distância entre listas dos *top k* elementos.
+
+* Algumas são métricas.
+
+* Algumas são "quase métricas".
+
+* Formam classes de equivalência.
+
+* [Nossa aplicação: como comparar dois *rankings*.]{.hl}
+
+:::
+
+::::
+
+
+## Caso simples: listas completas
+
+```{r}
+set.seed(12345)
+
+elementos <- LETTERS[1:10]
+
+l1 <- sample(elementos) 
+l1_str <- paste('&nbsp;&nbsp; ', l1, collapse = ', ')
+
+l2 <- sample(elementos) 
+l2_str <- paste('&nbsp;&nbsp; ', l2, collapse = ', ')
+
+postos_1 <- match(elementos, l1)
+postos_2 <- match(elementos, l2)
+sp <- cor(postos_1, postos_2)
+kendall <- cor(postos_1, postos_2, method = 'kendall')
+```
+
+::: {.callout-note title="Exemplo" icon=false .w-50 .nonincremental style="margin: auto;"}
+
+* *Ranking* r1: `r l1_str`
+
+* *Ranking* r2: `r l2_str`
+
+:::
+
+* São [permutações]{.hl} do mesmo conjunto de elementos: letras de `A` a `J`.
+
+* Posição de cada elemento:
+
+  ```{r}
+  df <- matrix(c(postos_1, postos_2), nrow = 2, byrow = TRUE) %>% 
+    as_tibble(.name_repair = ~ elementos) %>% 
+    mutate(ranking = paste0('r', 1:2), .before = A)
+  
+  tab_r1_r2 <- df %>% 
+    gt() %>% 
+      tab_style(
+        cell_text(weight = 'bold'),
+        cells_column_labels()
+      ) %>% 
+      cols_width(
+        ranking ~ pct(20),
+        everything() ~ pct(8)
+      ) %>% 
+      tab_options(
+        table.font.size = 30
+      )
+      
+  tab_r1_r2
+  ```
+
+
+## Coeficientes de correlação ordinal
+
+```{r}
+tab_r1_r2
+```
+
+:::: {.r-stack}
+
+::: {.callout-note title="Spearman ($\rho$)" icon=false .fragment .fade-in-then-out .w-100}
+
+Correlação linear entre as posições:
+
+  $$
+  \rho(X, Y) = \frac{
+    \operatorname{cov}(\operatorname{R}(X), \operatorname{R}(Y))
+    }{
+    \sigma_{\operatorname{R}(X)} \; \sigma_{\operatorname{R}(Y)}
+    }
+    \quad
+    \text{onde }R(X) = {}\text{vetor de }\textit{postos}\text{ dos elementos de }X
+  $$
+
+Neste exemplo, 
+
+  $$
+  \rho(r1, r2) = `r sp`
+  $$
+
+:::
+
+::: {.callout-note title="Kendall ($\tau$)" icon=false .fragment .fade-in-then-out .w-100}
+
+
+
+  $$
+  \tau(X, Y) =\; \frac{
+    \text{qtde. de pares concordantes} - \text{qtde. de pares discordantes}
+    }{
+    \text{qtde. total de pares}
+    }
+  $$
+
+Neste exemplo, 
+
+  $$
+  \tau(r1, r2) = `r kendall`
+  $$
+
+:::
+
+::::
+
+
+## Distâncias em vez de coeficientes
+
+??? spearman's footrule
+
+??? spearman's distance
+
+??? kendall's distance
+
+??? Quais são métricas?
+
+
+## Problema: nossas listas não são completas
+
+??? Não estamos trabalhando com permutações
+
+??? Outro exemplo
+
+
+## Diferença simétrica
+
+???
+
+
+
+
+
+
+
+
+
+
+
+
+---
+
+
+::::{.d-flex .justify-content-center .align-items-center .vh-100}
+
+:::{.text-center}
+
+A seguir: 
+
+???
+
+:::
+
+::::
+
+
+## Referências
+
+<div style='height: 100px'></div>
+
+
